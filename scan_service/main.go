@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/Azure/azure-storage-blob-go/2018-03-28/azblob"
+	"github.com/dutchcoders/go-clamd"
 )
 
 const (
@@ -73,11 +75,32 @@ func main() {
 			}
 
 			// Scan File
+			clam := clamd.NewClamd("tcp://localhost:3310")
+			response, err := clam.ScanFile(path.Join("downloads", fileName))
+
+			if err != nil {
+				sendError(w, err.Error())
+			}
+
+			result := ScanResult{
+				Status:      "",
+				Description: "",
+			}
+			for s := range response {
+				result.Status = s.Status
+				result.Description = s.Description
+			}
 
 			// Publish result to new container
 
 			// Send Response
-			fmt.Fprint(w, "Done")
+			js, err := json.Marshal(result)
+			if err != nil {
+				sendError(w, err.Error())
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			w.Write(js)
 		} else {
 			// Send an Error back
 			sendError(w, "You need to pass an object name")
@@ -91,4 +114,9 @@ func main() {
 func sendError(w http.ResponseWriter, err string) {
 	log.Printf("ERROR: %s", err)
 	http.Error(w, err, http.StatusInternalServerError)
+}
+
+type ScanResult struct {
+	Status      string
+	Description string
 }
