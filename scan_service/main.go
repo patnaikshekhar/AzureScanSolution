@@ -26,6 +26,8 @@ func main() {
 	accountName := os.Getenv("AZ_ACC_NAME")
 	accountKey := os.Getenv("AZ_ACC_KEY")
 
+	log.Printf("Found settings accountName = %s", accountName)
+
 	// Create Downloads Directory if does not exists
 	if _, err := os.Stat(downloadDirectory); os.IsNotExist(err) {
 		os.Mkdir(downloadDirectory, os.ModePerm)
@@ -48,6 +50,7 @@ func main() {
 			c, err := azblob.NewSharedKeyCredential(accountName, accountKey)
 			if err != nil {
 				sendError(w, err.Error())
+				return
 			}
 
 			p := azblob.NewPipeline(c, azblob.PipelineOptions{})
@@ -55,6 +58,7 @@ func main() {
 			u, err := url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net", accountName))
 			if err != nil {
 				sendError(w, err.Error())
+				return
 			}
 
 			service := azblob.NewServiceURL(*u, p)
@@ -72,14 +76,16 @@ func main() {
 			err = azblob.DownloadBlobToFile(ctx, b, 0, 0, f, azblob.DownloadFromBlobOptions{})
 			if err != nil {
 				sendError(w, err.Error())
+				return
 			}
 
 			// Scan File
-			clam := clamd.NewClamd("tcp://localhost:3310")
-			response, err := clam.ScanFile(path.Join("downloads", fileName))
+			clam := clamd.NewClamd("tcp://clamav:3310")
+			response, err := clam.ScanStream(f, make(chan bool))
 
 			if err != nil {
 				sendError(w, err.Error())
+				return
 			}
 
 			result := ScanResult{
@@ -92,11 +98,23 @@ func main() {
 			}
 
 			// Publish result to new container
+			if result.Status == "OK" {
+				// Write file to clean container
+				cleanContainer := service.NewContainerURL(cleanContainerName)
+				bCleanURL := cleanContainer.NewBlockBlobURL(fileName)
+				_, err = azblob.UploadFileToBlockBlob(ctx, f, bCleanURL, azblob.UploadToBlockBlobOptions{})
+
+				if err != nil {
+					sendError(w, err.Error())
+					return
+				}
+			}
 
 			// Send Response
 			js, err := json.Marshal(result)
 			if err != nil {
 				sendError(w, err.Error())
+				return
 			}
 
 			w.Header().Set("Content-Type", "application/json")
@@ -108,7 +126,7 @@ func main() {
 	})
 
 	log.Print("Server is starting")
-	log.Fatal(http.ListenAndServe(":8000", nil))
+	log.Fatal(http.ListenAndServe(":80", nil))
 }
 
 func sendError(w http.ResponseWriter, err string) {

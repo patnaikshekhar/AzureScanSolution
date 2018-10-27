@@ -1,2 +1,7 @@
 scan_service/scan_service.exe
 scan_service/scan_service
+scan_service/downloads
+docker-compose-prod.yml
+file_upload_frontend/node_modules
+.vscode
+file_upload_frontend/uploads

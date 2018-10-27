@@ -1,7 +1,5 @@
-FROM mkodockx/docker-clamav
-RUN apt-get update && \
-    apt-get install -y ca-certificates
+FROM alpine:3.7
+RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
 COPY scan_service /app
-COPY main.sh /
-EXPOSE 8000
-CMD ["sh", "main.sh"]
+EXPOSE 80
+CMD ["./app"]
