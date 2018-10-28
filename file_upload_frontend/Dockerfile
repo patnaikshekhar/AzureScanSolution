@@ -1,4 +1,4 @@
-FROM node:10.12.0-alpine
+FROM node:10.12.0-jessie
 RUN npm install -g nodemon
 ADD . /app
 WORKDIR /app
