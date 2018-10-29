@@ -12,13 +12,14 @@ import (
 	"strings"
 
 	"github.com/Azure/azure-storage-blob-go/2018-03-28/azblob"
-	"github.com/dutchcoders/go-clamd"
+	clamd "github.com/dutchcoders/go-clamd"
 )
 
 const (
 	downloadDirectory       = "./downloads"
 	quarantineContainerName = "quarantine"
 	cleanContainerName      = "clean"
+	virusContainerName      = "virus"
 )
 
 func main() {
@@ -98,16 +99,20 @@ func main() {
 			}
 
 			// Publish result to new container
-			if result.Status == "OK" {
-				// Write file to clean container
-				cleanContainer := service.NewContainerURL(cleanContainerName)
-				bCleanURL := cleanContainer.NewBlockBlobURL(fileName)
-				_, err = azblob.UploadFileToBlockBlob(ctx, f, bCleanURL, azblob.UploadToBlockBlobOptions{})
+			var containerToMoveFileTo azblob.ContainerURL
 
-				if err != nil {
-					sendError(w, err.Error())
-					return
-				}
+			if result.Status == "OK" {
+				containerToMoveFileTo = service.NewContainerURL(cleanContainerName)
+			} else {
+				containerToMoveFileTo = service.NewContainerURL(virusContainerName)
+			}
+
+			bURL := containerToMoveFileTo.NewBlockBlobURL(fileName)
+			_, err = azblob.UploadFileToBlockBlob(ctx, f, bURL, azblob.UploadToBlockBlobOptions{})
+
+			if err != nil {
+				sendError(w, err.Error())
+				return
 			}
 
 			// Send Response
