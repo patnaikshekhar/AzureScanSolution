@@ -11,3 +11,7 @@ This is the overall architecture:
 This is how the logic app needs to be constructed so that it is triggered when a blob is added to the container
 
 ![Logic App](https://raw.githubusercontent.com/patnaikshekhar/AzureScanSolution/master/logicApp.png)
+
+A demo of this solution is available on YouTube.
+
+[![Youtube Demo](https://img.youtube.com/vi/Wx7gjXTK11M/0.jpg)](https://www.youtube.com/watch?v=Wx7gjXTK11M)
