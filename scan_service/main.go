@@ -8,11 +8,12 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path"
+	"regexp"
 	"strings"
 
 	"github.com/Azure/azure-storage-blob-go/2018-03-28/azblob"
-	clamd "github.com/dutchcoders/go-clamd"
 )
 
 const (
@@ -20,12 +21,14 @@ const (
 	quarantineContainerName = "quarantine"
 	cleanContainerName      = "clean"
 	virusContainerName      = "virus"
+	scanCommand             = "c:\\Program Files\\Windows Defender\\MpCmdRun.exe"
 )
 
 func main() {
 
 	accountName := os.Getenv("AZ_ACC_NAME")
 	accountKey := os.Getenv("AZ_ACC_KEY")
+	host := os.Getenv("HOST")
 
 	log.Printf("Found settings accountName = %s", accountName)
 
@@ -81,22 +84,13 @@ func main() {
 			}
 
 			// Scan File
-			clam := clamd.NewClamd("tcp://clamav:3310")
-			response, err := clam.ScanStream(f, make(chan bool))
-
+			dir, err := os.Getwd()
 			if err != nil {
 				sendError(w, err.Error())
 				return
 			}
 
-			result := ScanResult{
-				Status:      "",
-				Description: "",
-			}
-			for s := range response {
-				result.Status = s.Status
-				result.Description = s.Description
-			}
+			result := scanFile(fmt.Sprintf("%s\\downloads\\%s", dir, fileName))
 
 			// Publish result to new container
 			var containerToMoveFileTo azblob.ContainerURL
@@ -131,12 +125,38 @@ func main() {
 	})
 
 	log.Print("Server is starting")
-	log.Fatal(http.ListenAndServe(":80", nil))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf("%s:80", host), nil))
 }
 
 func sendError(w http.ResponseWriter, err string) {
 	log.Printf("ERROR: %s", err)
 	http.Error(w, err, http.StatusInternalServerError)
+}
+
+func scanFile(fileName string) ScanResult {
+
+	log.Printf("File being scanned = %s", fileName)
+
+	result := ScanResult{
+		Status:      "OK",
+		Description: "",
+	}
+
+	scanArgs := []string{"-Scan", "-ScanType", "3", "-File", fileName, "-DisableRemediation"}
+	out, _ := exec.Command(scanCommand, scanArgs...).Output()
+
+	r, _ := regexp.Compile("Threat                  :\\s(.+)")
+
+	log.Printf("SCANNER OUTPUT", string(out))
+
+	if r.MatchString(string(out)) {
+		description := r.FindStringSubmatch(string(out))
+		result.Status = "VIRUS FOUND"
+		result.Description = description[1]
+		log.Printf("ERROR FOUND", string(out))
+	}
+
+	return result
 }
 
 type ScanResult struct {

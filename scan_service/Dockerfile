@@ -1,5 +1,4 @@
-FROM alpine:3.7
-RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
-COPY scan_service /app
+FROM microsoft/windowsservercore:ltsc2016
+COPY scan_service.exe 'c:\\app.exe'
 EXPOSE 80
-CMD ["./app"]
+CMD .\app.exe
