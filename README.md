@@ -6,8 +6,8 @@ This is a proof of concept that creates such an architecture. The proof of conce
 
 This is the overall architecture:
 
-![Architecture](https://raw.githubusercontent.com/patnaikshekhar/AzureScanSolution/master/architecture.png)
+![Architecture](https://raw.githubusercontent.com/patnaikshekhar/AzureScanSolution/windows_defender/architecture.png)
 
 This is how the logic app needs to be constructed so that it is triggered when a blob is added to the container
 
-![Logic App](https://raw.githubusercontent.com/patnaikshekhar/AzureScanSolution/master/logicApp.png)
+![Logic App](https://raw.githubusercontent.com/patnaikshekhar/AzureScanSolution/windows_defender/logicApp.png)
