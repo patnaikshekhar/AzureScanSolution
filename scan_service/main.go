@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/Azure/azure-storage-blob-go/2018-03-28/azblob"
+	uuid "github.com/satori/go.uuid"
 )
 
 const (
@@ -69,14 +70,16 @@ func main() {
 			quarantineContainer := service.NewContainerURL(quarantineContainerName)
 			b := quarantineContainer.NewBlobURL(fileName)
 
-			f, err := os.Create(path.Join("downloads", fileName))
+			randomFileName := uuid.Must(uuid.NewV4()).String()
+
+			f, err := os.Create(path.Join("downloads", randomFileName))
 			if err != nil {
 				sendError(w, err.Error())
 			}
 			defer f.Close()
 
 			// Write Blob to File
-			log.Printf("Downloading Blob %s from url %s", fileName, u)
+			log.Printf("Downloading Blob %s from url %s and storing in file %s", fileName, u, randomFileName)
 			err = azblob.DownloadBlobToFile(ctx, b, 0, 0, f, azblob.DownloadFromBlobOptions{})
 			if err != nil {
 				sendError(w, err.Error())
@@ -125,7 +128,7 @@ func main() {
 	})
 
 	log.Print("Server is starting")
-	log.Fatal(http.ListenAndServe(fmt.Sprintf("%s:80", host), nil))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf("%s:8080", host), nil))
 }
 
 func sendError(w http.ResponseWriter, err string) {
